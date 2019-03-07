@@ -1,8 +1,10 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
 import Control.Monad             (forM_)
 import Data.Mutable
 import Data.Sequence             (Seq)
 import Data.Vector               (Vector)
+import qualified Data.Vector     as V
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck.Arbitrary
@@ -82,10 +84,18 @@ spec = do
                             Just _ -> drain
                             Nothing -> return $! ()
                 drain
+        let testToList forceType inputList = do
+                coll <- fmap forceType newColl
+                forM_ inputList (pushBack coll)
+                -- Keep doing "popFront" until it returns "Nothing",
+                --  and collect "Just" items in a list
+                outputVec <- V.unfoldrM (const $ fmap (\a -> (a, ())) <$> popFront coll) ()
+                V.toList outputVec `shouldBe` inputList
         let test name forceType = describe name $ do
                 prop "arbitrary actions" $ runActions forceType
                 it "many pushes" $ runActions forceType manyPushes
                 it "special case" $ runActions forceType specialCase
+                prop "toList" $ testToList forceType
 
         test "UDeque" asUDeque
         test "SDeque" asSDeque

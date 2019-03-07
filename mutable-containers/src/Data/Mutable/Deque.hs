@@ -7,6 +7,7 @@ module Data.Mutable.Deque
     , asSDeque
     , BDeque
     , asBDeque
+    , toList
     , module Data.Mutable.Class
     ) where
 
@@ -150,3 +151,11 @@ newVector v size2 sizeOrig f = assert (sizeOrig == V.length v) $ do
         (V.unsafeTake size2 v)
     f v' 0 sizeOrig
 {-# INLINE newVector #-}
+
+-- | Convert to list
+toList :: (PrimMonad m, V.MVector v a)
+       => Deque v (PrimState m) a
+       -> m [a]
+toList (Deque var) = do
+    DequeState v start size <- readRef var
+    mapM (V.unsafeRead v) [start..(start+size-1)]
