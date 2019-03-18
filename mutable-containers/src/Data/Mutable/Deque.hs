@@ -158,4 +158,4 @@ toList :: (PrimMonad m, V.MVector v a)
        -> m [a]
 toList (Deque var) = do
     DequeState v start size <- readRef var
-    mapM (V.unsafeRead v) [start..(start+size-1)]
+    mapM (V.read v) [start..(start+size-1)]
