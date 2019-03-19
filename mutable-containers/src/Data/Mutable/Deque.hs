@@ -158,4 +158,6 @@ toList :: (PrimMonad m, V.MVector v a)
        -> m [a]
 toList (Deque var) = do
     DequeState v start size <- readRef var
-    mapM (V.read v) [start..(start+size-1)]
+    let vecLen = V.length v
+        indices = [ if i >= vecLen then i-vecLen else i | i <- [start..(start+size-1)] ]
+    mapM (V.read v) indices
