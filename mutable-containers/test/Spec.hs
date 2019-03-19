@@ -1,10 +1,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
-import Control.Monad             (forM_)
+{-# LANGUAGE FlexibleInstances #-}
+import Control.Monad             (forM_, void)
 import Data.Mutable
 import Data.Sequence             (Seq)
 import Data.Vector               (Vector)
-import qualified Data.Vector     as V
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck.Arbitrary
@@ -40,6 +40,16 @@ instance Arbitrary DequeAction where
         [ replicate 25 $ fmap PushFront arbitrary
         , replicate 25 $ fmap PushBack arbitrary
         , [return PopFront, return PopBack]
+        ]
+
+newtype Some a = Some { getSome :: a }
+    deriving (Eq, Show)
+instance Arbitrary (Some DequeAction) where
+    arbitrary = Some <$> oneof
+        [ PushFront <$> arbitrary
+        , PushBack <$> arbitrary
+        , return PopFront
+        , return PopBack
         ]
 
 manyPushes :: [DequeAction]
@@ -84,13 +94,19 @@ spec = do
                             Just _ -> drain
                             Nothing -> return $! ()
                 drain
-        let testToList forceType inputList = do
+        let testToList forceType someActions = do
+                let apply coll (PushFront i) = pushFront coll i
+                    apply coll (PushBack i) = pushBack coll i
+                    apply coll PopFront = void $ popFront coll
+                    apply coll PopBack = void $ popBack coll
+                refList <- newColl :: IO (IORef [Int])
                 coll <- fmap forceType newColl
-                forM_ inputList (pushBack coll)
-                -- Keep doing "popFront" until it returns "Nothing",
-                --  and collect "Just" items in a list
-                outputVec <- V.unfoldrM (const $ fmap (\a -> (a, ())) <$> popFront coll) ()
-                V.toList outputVec `shouldBe` inputList
+                let actions = fmap getSome someActions
+                forM_ (actions :: [DequeAction]) (apply refList)
+                forM_ actions (apply coll)
+                list <- readRef refList
+                collList <- toList coll
+                collList `shouldBe` list
         let test name forceType = describe name $ do
                 prop "arbitrary actions" $ runActions forceType
                 it "many pushes" $ runActions forceType manyPushes
@@ -100,10 +116,10 @@ spec = do
         test "UDeque" asUDeque
         test "SDeque" asSDeque
         test "BDeque" asBDeque
-        test "DLList" asDLList
-        test "MutVar Seq" (id :: MutVar (PrimState IO) (Seq Int) -> MutVar (PrimState IO) (Seq Int))
-        test "STRef Vector" (id :: STRef (PrimState IO) (Vector Int) -> STRef (PrimState IO) (Vector Int))
-        test "BRef Vector" (id :: BRef (PrimState IO) (Vector Int) -> BRef (PrimState IO) (Vector Int))
+        -- test "DLList" asDLList
+        -- test "MutVar Seq" (id :: MutVar (PrimState IO) (Seq Int) -> MutVar (PrimState IO) (Seq Int))
+        -- test "STRef Vector" (id :: STRef (PrimState IO) (Vector Int) -> STRef (PrimState IO) (Vector Int))
+        -- test "BRef Vector" (id :: BRef (PrimState IO) (Vector Int) -> BRef (PrimState IO) (Vector Int))
     describe "Ref" $ do
         let test name forceType atomic atomic' = prop name $ \start actions -> do
                 base <- fmap asIORef $ newRef start
