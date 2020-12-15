@@ -105,21 +105,21 @@ spec = do
                 forM_ (actions :: [DequeAction]) (apply refList)
                 forM_ actions (apply coll)
                 list <- readRef refList
-                collList <- toList coll
+                collList <- asList coll
                 collList `shouldBe` list
         let test name forceType = describe name $ do
                 prop "arbitrary actions" $ runActions forceType
                 it "many pushes" $ runActions forceType manyPushes
                 it "special case" $ runActions forceType specialCase
-                prop "toList" $ testToList forceType
+                prop "asList" $ testToList forceType
 
         test "UDeque" asUDeque
         test "SDeque" asSDeque
         test "BDeque" asBDeque
-        -- test "DLList" asDLList
-        -- test "MutVar Seq" (id :: MutVar (PrimState IO) (Seq Int) -> MutVar (PrimState IO) (Seq Int))
-        -- test "STRef Vector" (id :: STRef (PrimState IO) (Vector Int) -> STRef (PrimState IO) (Vector Int))
-        -- test "BRef Vector" (id :: BRef (PrimState IO) (Vector Int) -> BRef (PrimState IO) (Vector Int))
+        test "DLList" asDLList
+        test "MutVar Seq" (id :: MutVar (PrimState IO) (Seq Int) -> MutVar (PrimState IO) (Seq Int))
+        test "STRef Vector" (id :: STRef (PrimState IO) (Vector Int) -> STRef (PrimState IO) (Vector Int))
+        test "BRef Vector" (id :: BRef (PrimState IO) (Vector Int) -> BRef (PrimState IO) (Vector Int))
     describe "Ref" $ do
         let test name forceType atomic atomic' = prop name $ \start actions -> do
                 base <- fmap asIORef $ newRef start

@@ -7,7 +7,7 @@ module Data.Mutable.Deque
     , asSDeque
     , BDeque
     , asBDeque
-    , toList
+    , asList
     , module Data.Mutable.Class
     ) where
 
@@ -153,10 +153,10 @@ newVector v size2 sizeOrig f = assert (sizeOrig == V.length v) $ do
 {-# INLINE newVector #-}
 
 -- | Convert to list
-toList :: (PrimMonad m, V.MVector v a)
+asList :: (PrimMonad m, V.MVector v a)
        => Deque v (PrimState m) a
        -> m [a]
-toList (Deque var) = do
+asList (Deque var) = do
     DequeState v start size <- readRef var
     let vecLen = V.length v
         indices = [ if i >= vecLen then i-vecLen else i | i <- [start..(start+size-1)] ]
