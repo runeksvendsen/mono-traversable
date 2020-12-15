@@ -32,7 +32,7 @@ module Data.Mutable
     , asSDeque
     , BDeque
     , asBDeque
-    , toList
+    , asList
     , DLList
     , asDLList
       -- * Type classes
